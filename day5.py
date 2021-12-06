@@ -63,7 +63,6 @@ def part_2():
         for line in lines:
 
             dir = (sign(line.p2[0] - line.p1[0]), sign(line.p2[1] - line.p1[1]))
-            print(dir)
 
             pos = line.p1
             while pos != (line.p2[0] + dir[0], line.p2[1] + dir[1]):
