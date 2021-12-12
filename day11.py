@@ -36,10 +36,9 @@ def solve(steps):
             step_flash_count = 0
 
             # increase by one
-            for y in range(0, height):
-                for x in range(0, width):
-                    grid[(x, y)] += 1
-                    flashed[(x,y)] = False
+            for (x,y) in grid:
+                grid[(x, y)] += 1
+                flashed[(x,y)] = False
 
             # flash
             something_flashed = True
