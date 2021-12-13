@@ -82,8 +82,6 @@ def solve():
 
         paths = []
         explore(['start'], False)
-        #pp.pprint(paths)
-
         print(f"When double visits are allowed, we have a total of {len(paths)} legal paths")
 
 
