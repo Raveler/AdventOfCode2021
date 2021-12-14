@@ -29,10 +29,6 @@ def solve(steps):
             rule_occurence[input] = template.count(input)
             letter_occurence[output] = template.count(output)
 
-        print(rules)
-        print(rule_occurence)
-        print(letter_occurence)
-
         for step in range(0, steps):
             next_rule_occurence = rule_occurence.copy()
             for input in rule_occurence:
@@ -52,14 +48,6 @@ def solve(steps):
         sorted = Counter(letter_occurence).most_common()
         score = sorted[0][1] - sorted[-1][1]
         print(f"The final score after {steps} steps is {score}")
-
-
-
-
-
-
-
-
 
 solve(10)
 solve(40)
