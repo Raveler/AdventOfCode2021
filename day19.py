@@ -18,12 +18,15 @@ class Scanner:
 
     def find_relative_position_of_other(self, other):
 
+        # go over each beacon (already in world space)
         beacons = self.beacons
         offsets_tried = set()
         for beacon in beacons:
 
             # try to match this world beacon no each beacon in the other set
             for other_set in other.sets:
+
+                # go over each beacon that might match the world space beacon
                 for other_root_beacon in other_set["set"]:
 
                     offset = (beacon[0] - other_root_beacon[0], beacon[1] - other_root_beacon[1], beacon[2] - other_root_beacon[2])
@@ -31,6 +34,7 @@ class Scanner:
                     if offset in offsets_tried:
                         continue
 
+                    # see how many match
                     offsets_tried.add(offset)
                     n_found = 0
                     other_beacon_indices = []
@@ -106,17 +110,16 @@ class Scanner:
 
     def rotate(self, beacon, x_rotations, y_rotations, z_rotations, inverted):
 
-        sign = -1 if inverted else 1
         new_beacon = beacon
 
         for i in range(0, x_rotations):
-            new_beacon = (new_beacon[0], sign*-new_beacon[2], sign*new_beacon[1])
+            new_beacon = (new_beacon[0], -new_beacon[2], new_beacon[1])
 
         for i in range(0, y_rotations):
-            new_beacon = (sign*-new_beacon[2], new_beacon[1], sign*new_beacon[0])
+            new_beacon = (-new_beacon[2], new_beacon[1], new_beacon[0])
 
         for i in range(0, z_rotations):
-            new_beacon = (sign*-new_beacon[1], sign*new_beacon[0], new_beacon[2])
+            new_beacon = (-new_beacon[1], new_beacon[0], new_beacon[2])
 
         return new_beacon
 
