@@ -59,6 +59,14 @@ class State:
 
         return True
 
+class Range:
+
+    def __init__(self, min, max, vars):
+        self.vars = vars
+        self.min = min
+        self.max = max
+
+
 class Expression:
 
     var_names = ['x', 'y', 'z', 'w']
@@ -68,81 +76,128 @@ class Expression:
         self.arg1 = arg1
         self.arg2 = arg2
 
-        if self.arg1 not in Expression.var_names:
+        if self.arg1 not in Expression.var_names and not self.is_unknown(self.arg1):
             self.arg1 = int(self.arg1)
-        if self.arg2 not in Expression.var_names:
+        if self.arg2 not in Expression.var_names and not self.is_unknown(self.arg2):
             self.arg2 = int(self.arg2)
+
+    def get_relevant_variables(self):
+        relevant_variables = set()
+        relevant_variables = relevant_variables | self.get_relevant_variables_for_arg(self.arg1)
+        relevant_variables = relevant_variables | self.get_relevant_variables_for_arg(self.arg2)
+        return relevant_variables
+
+    def get_relevant_variables_for_arg(self, arg):
+        if isinstance(arg, Expression):
+            return arg.get_relevant_variables()
+        if isinstance(arg, int):
+            return set()
+        if arg[0] == 'I':
+            return set([arg])
+
+    def is_unknown(self, val):
+        if isinstance(val, Expression):
+            return True
+        if isinstance(val, int):
+            return False
+        return val[0] == 'I'
+
+    def is_raw_input(self, val):
+        if isinstance(val, Expression):
+            return False
+        if isinstance(val, int):
+            return False
+        return val[0] == 'I'
+
+    def is_range(self, val):
+        return isinstance(val, Range)
 
     def reduce(self, data):
 
-        if self.arg1 in data:
-            self.arg1 = data[self.arg1]
-            if isinstance(self.arg1, Expression):
+        arg1 = self.arg1
+        arg2 = self.arg2
+        if arg1 in data:
+            arg1 = data[arg1]
 
-        if self.arg2 in data:
-            self.arg2 = data[self.arg2]
+        if arg2 in data:
+            arg2 = data[arg2]
 
-        if self.arg1 == '?' or self.arg2 == '?':
-            return self
+        # if isinstance(arg1, Expression):
+        #     arg1 = arg1.reduce(data)
+        # if isinstance(arg2, Expression):
+        #     arg2 = arg2.reduce(data)
 
         op = self.op
         if op == 'add':
-            return self.arg1 + self.arg2
+            if self.is_range(arg1) and self.is_range(arg2):
+                return Range(arg1.range)
+                return Expression(op, arg1, arg2)
+            elif self.is_range(arg1.min+arg2.min, arg1.max+arg2.max, arg1.aff):
+                if arg2 == 0:
+                    return arg1
+                else:
+                    return Expression(op, arg1, arg2)
+            elif self.is_unknown(arg2):
+                if arg1 == 0:
+                    return arg2
+                else:
+                    return Expression(op, arg1, arg2)
+            return arg1 + arg2
 
         elif op == 'mul':
-            self.data[arg1] *= self.get_value(arg2)
+            if self.is_unknown(arg1) and self.is_unknown(arg2):
+                return Expression(op, arg1, arg2)
+            elif self.is_unknown(arg1):
+                if arg2 == 1:
+                    return arg1
+                elif arg2 == 0:
+                    return 0
+                else:
+                    return Expression(op, arg1, arg2)
+            elif self.is_unknown(arg2):
+                if arg1 == 1:
+                    return arg2
+                elif arg1 == 0:
+                    return 0
+                else:
+                    return Expression(op, arg1, arg2)
+
+            if self.is_unknown(arg1) or self.is_unknown(arg2):
+                if arg1 == 0 or arg2 == 0:
+                    return 0
+                else:
+                    return Expression(op, arg1, arg2)
+            return arg1 * arg2
 
         elif op == 'div':
-            arg2 = self.get_value(arg2)
-            if arg2 == 0:
-                return False
-            self.data[arg1] //= arg2
+            if arg2 == 1:
+                return arg1
+            if self.is_unknown(arg1) or self.is_unknown(arg2):
+                return Expression(op, arg1, arg2)
+            return arg1 // arg2
 
         elif op == 'mod':
-            arg2 = self.get_value(arg2)
-            if self.data[arg1] < 0 or arg2 <= 0:
-                return False
-            self.data[arg1] %= arg2
+            if self.is_unknown(arg1) or self.is_unknown(arg2):
+                return Expression(op, arg1, arg2)
+            return arg1 % arg2
 
         elif op == 'eql':
-            self.data[arg1] = 1 if self.data[arg1] == self.get_value(arg2) else 0
+            if self.is_unknown(arg1) and self.is_unknown(arg2):
+                return Expression(op, arg1, arg2)
+            elif self.is_unknown(arg1):
+                if self.is_raw_input(arg1) and arg2 < 1 or arg2 > 9:
+                    return 0
+                else:
+                    return Expression(op, arg1, arg2)
+            elif self.is_unknown(arg2):
+                if self.is_raw_input(arg2) and arg1 < 1 or arg1 > 9:
+                    return 0
+                else:
+                    return Expression(op, arg1, arg2)
+            return 1 if arg1 == arg2 else 0
 
         else:
             raise "Not supported"
-
-
-    def replace(self, expression):
-        if self.arg1 == expression.target:
-            self.arg1 = Expression(expression.op, expression.arg1, expression.arg2)
-        elif isinstance(self.arg1, Expression):
-            self.arg1.replace(expression)
-            self.arg1 = self.arg1.reduce()
-
-        if self.arg2 == expression.target:
-            self.arg2 = Expression(expression.op, expression.arg1, expression.arg2)
-        elif isinstance(self.arg2, Expression):
-            self.arg2.replace(expression)
-            self.arg2 = self.arg2.reduce()
-
-    def reduce(self):
-        op = self.op
-
-        # reduce the children
-        if isinstance(self.arg1, Expression):
-            self.arg1 = self.arg1.reduce()
-        if isinstance(self.arg2, Expression):
-            self.arg2 = self.arg2.reduce()
-
-        if op == 'mul' and (self.arg1 == 0 or self.arg2 == 0):
-            return 0
-
-        if op == 'add' and self.arg1 == 0:
-            return self.arg2
-
-        if op == 'add' and self.arg2 == 0:
-            return self.arg1
-
-        return self
 
     def __repr__(self):
         if self.op == 'inp':
@@ -200,6 +255,9 @@ class ExpressionState:
         else:
             return int(arg)
 
+    def get_relevant_variables(self, arg):
+        return self.data['z'].get_relevant_variables()
+
     def execute(self, instruction):
 
         op = instruction["op"]
@@ -209,12 +267,13 @@ class ExpressionState:
         if op == 'inp':
             # this is from now on an unknown
             self.input_counter += 1
-            self.data[arg1] = 'I' + str(self.input_counter)
+            self.data[arg1] = Range(1, 9, set(['I' + str(self.input_counter)]))
             return
 
         expression = Expression(op, arg1, arg2)
         new_value = expression.reduce(self.data)
         self.data[arg1] = new_value
+        return
 
 
         arg2v = self.get_value(arg2)
@@ -264,7 +323,7 @@ class ExpressionState:
 
 def solve():
 
-    with open("input24-1.txt") as f:
+    with open("input24-2.txt") as f:
 
         lines = [line.strip("\n") for line in f.readlines()]
         #lines.reverse()
@@ -291,16 +350,13 @@ def solve():
             print(f"Add instruction {instruction}")
             state.execute(instruction)
             print(f"State is {state}")
-            #
-            # new_expression = Expression(instruction["op"], instruction["arg1"], instruction["arg2"])
-            # if expression == None:
-            #     expression = new_expression
-            # else:
-            #     expression.replace(new_expression)
-            # instructions.append(instruction)
-            # print(f"{expression.target} = {expression}")
 
         print(relevant_digits[1:])
+
+        print(f"State is {state}")
+
+        relevant_variables = state.get_relevant_variables('z')
+        print(relevant_variables)
 
         return
         print(f"{expression.target} = {expression}")
