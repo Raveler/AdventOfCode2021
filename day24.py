@@ -66,6 +66,25 @@ class Range:
         self.min = min
         self.max = max
 
+        # we got reduced to a constant
+        if min == max:
+            self.vars = set()
+
+    def is_overlap(self, other):
+        return other.min <= self.min <= other.max or self.min <= other.min <= self.max
+
+    def is_constant(self):
+        return self.min == self.max
+
+    def is_identical_constant(self, other):
+        return self.is_constant() and other.is_constant() and self.min == other.min
+
+    def get_relevant_variables(self):
+        return self.vars
+
+    def __repr__(self):
+        return f'[{self.min} -> {self.max} [{self.vars}]'
+
 
 class Expression:
 
@@ -77,9 +96,9 @@ class Expression:
         self.arg2 = arg2
 
         if self.arg1 not in Expression.var_names and not self.is_unknown(self.arg1):
-            self.arg1 = int(self.arg1)
+            self.arg1 = Range(int(self.arg1), int(self.arg1), set())
         if self.arg2 not in Expression.var_names and not self.is_unknown(self.arg2):
-            self.arg2 = int(self.arg2)
+            self.arg2 = Range(int(self.arg2), int(self.arg2), set())
 
     def get_relevant_variables(self):
         relevant_variables = set()
@@ -129,72 +148,44 @@ class Expression:
 
         op = self.op
         if op == 'add':
-            if self.is_range(arg1) and self.is_range(arg2):
-                return Range(arg1.range)
-                return Expression(op, arg1, arg2)
-            elif self.is_range(arg1.min+arg2.min, arg1.max+arg2.max, arg1.aff):
-                if arg2 == 0:
-                    return arg1
-                else:
-                    return Expression(op, arg1, arg2)
-            elif self.is_unknown(arg2):
-                if arg1 == 0:
-                    return arg2
-                else:
-                    return Expression(op, arg1, arg2)
-            return arg1 + arg2
+            return Range(arg1.min+arg2.min, arg1.max+arg2.max, arg1.vars|arg2.vars)
 
         elif op == 'mul':
-            if self.is_unknown(arg1) and self.is_unknown(arg2):
-                return Expression(op, arg1, arg2)
-            elif self.is_unknown(arg1):
-                if arg2 == 1:
-                    return arg1
-                elif arg2 == 0:
-                    return 0
-                else:
-                    return Expression(op, arg1, arg2)
-            elif self.is_unknown(arg2):
-                if arg1 == 1:
-                    return arg2
-                elif arg1 == 0:
-                    return 0
-                else:
-                    return Expression(op, arg1, arg2)
+            return Range(
+                min(arg1.min*arg2.min, arg1.min*arg2.max, arg1.max*arg2.min, arg1.max*arg2.max),
+                max(arg1.min * arg2.min, arg1.min * arg2.max, arg1.max * arg2.min, arg1.max * arg2.max),
+                arg1.vars | arg2.vars)
 
-            if self.is_unknown(arg1) or self.is_unknown(arg2):
-                if arg1 == 0 or arg2 == 0:
-                    return 0
-                else:
-                    return Expression(op, arg1, arg2)
-            return arg1 * arg2
-
+        # in the code, div is always a positive constant
         elif op == 'div':
-            if arg2 == 1:
-                return arg1
-            if self.is_unknown(arg1) or self.is_unknown(arg2):
-                return Expression(op, arg1, arg2)
-            return arg1 // arg2
+            if not arg2.is_constant() or arg2.min == 0:
+                raise "This is not possible, arg2 should be a positive constant"
 
+            div = arg2.min
+            return Range(arg1.min // div, arg1.max // div, arg1.vars)
+
+        # in the code, mod is always a positive constant and the input MUST also be positive!
         elif op == 'mod':
-            if self.is_unknown(arg1) or self.is_unknown(arg2):
-                return Expression(op, arg1, arg2)
-            return arg1 % arg2
+            if not arg2.is_constant() or arg2.min <= 0:
+                raise "Not supported, needs to be constant"
+            if arg1.min < 0:
+                raise "This is not possible. Should always be positive!"
+
+            # range falls within the first part - no modulo possible
+            mod = arg2.min
+            if arg1.max < mod:
+                return arg1
+
+            return Range(0, mod-1, set())
 
         elif op == 'eql':
-            if self.is_unknown(arg1) and self.is_unknown(arg2):
-                return Expression(op, arg1, arg2)
-            elif self.is_unknown(arg1):
-                if self.is_raw_input(arg1) and arg2 < 1 or arg2 > 9:
-                    return 0
-                else:
-                    return Expression(op, arg1, arg2)
-            elif self.is_unknown(arg2):
-                if self.is_raw_input(arg2) and arg1 < 1 or arg1 > 9:
-                    return 0
-                else:
-                    return Expression(op, arg1, arg2)
-            return 1 if arg1 == arg2 else 0
+
+            if not arg1.is_overlap(arg2):
+                return Range(0, 0, set())
+            elif arg1.is_identical_constant(arg2):
+                return Range(1, 1, set())
+            else:
+                return Range(0, 1, set())
 
         else:
             raise "Not supported"
@@ -235,10 +226,10 @@ class ExpressionState:
 
     def __init__(self):
         self.data = {}
-        self.data['x'] = 0
-        self.data['y'] = 0
-        self.data['z'] = 0
-        self.data['w'] = 0
+        self.data['x'] = Range(0, 0, set())
+        self.data['y'] = Range(0, 0, set())
+        self.data['z'] = Range(0, 0, set())
+        self.data['w'] = Range(0, 0, set())
         self.input_counter = 0
 
     def is_unknown(self):
@@ -323,7 +314,7 @@ class ExpressionState:
 
 def solve():
 
-    with open("input24-2.txt") as f:
+    with open("input24-1.txt") as f:
 
         lines = [line.strip("\n") for line in f.readlines()]
         #lines.reverse()
