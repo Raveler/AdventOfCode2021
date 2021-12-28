@@ -628,7 +628,7 @@ def solve():
                 z = z + y
                 #print(z)
 
-                # either x must be 0 OR w must be y_add
+                # if we are in a /26 phase, we NEED to make sure that z is flipped to 0, otherwise it will never become 0 again
                 if x_add < 0 and x == 1 and z >= 26:
                     return False
 
