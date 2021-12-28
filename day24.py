@@ -190,6 +190,79 @@ class Expression:
         else:
             raise "Not supported"
 
+        #
+        # op = self.op
+        # if op == 'add':
+        #     if self.is_range(arg1) and self.is_range(arg2):
+        #         return Range(arg1.range)
+        #         return Expression(op, arg1, arg2)
+        #     elif self.is_range(arg1.min+arg2.min, arg1.max+arg2.max, arg1.aff):
+        #         if arg2 == 0:
+        #             return arg1
+        #         else:
+        #             return Expression(op, arg1, arg2)
+        #     elif self.is_unknown(arg2):
+        #         if arg1 == 0:
+        #             return arg2
+        #         else:
+        #             return Expression(op, arg1, arg2)
+        #     return arg1 + arg2
+        #
+        # elif op == 'mul':
+        #     if self.is_unknown(arg1) and self.is_unknown(arg2):
+        #         return Expression(op, arg1, arg2)
+        #     elif self.is_unknown(arg1):
+        #         if arg2 == 1:
+        #             return arg1
+        #         elif arg2 == 0:
+        #             return 0
+        #         else:
+        #             return Expression(op, arg1, arg2)
+        #     elif self.is_unknown(arg2):
+        #         if arg1 == 1:
+        #             return arg2
+        #         elif arg1 == 0:
+        #             return 0
+        #         else:
+        #             return Expression(op, arg1, arg2)
+        #
+        #     if self.is_unknown(arg1) or self.is_unknown(arg2):
+        #         if arg1 == 0 or arg2 == 0:
+        #             return 0
+        #         else:
+        #             return Expression(op, arg1, arg2)
+        #     return arg1 * arg2
+        #
+        # elif op == 'div':
+        #     if arg2 == 1:
+        #         return arg1
+        #     if self.is_unknown(arg1) or self.is_unknown(arg2):
+        #         return Expression(op, arg1, arg2)
+        #     return arg1 // arg2
+        #
+        # elif op == 'mod':
+        #     if self.is_unknown(arg1) or self.is_unknown(arg2):
+        #         return Expression(op, arg1, arg2)
+        #     return arg1 % arg2
+        #
+        # elif op == 'eql':
+        #     if self.is_unknown(arg1) and self.is_unknown(arg2):
+        #         return Expression(op, arg1, arg2)
+        #     elif self.is_unknown(arg1):
+        #         if self.is_raw_input(arg1) and arg2 < 1 or arg2 > 9:
+        #             return 0
+        #         else:
+        #             return Expression(op, arg1, arg2)
+        #     elif self.is_unknown(arg2):
+        #         if self.is_raw_input(arg2) and arg1 < 1 or arg1 > 9:
+        #             return 0
+        #         else:
+        #             return Expression(op, arg1, arg2)
+        #     return 1 if arg1 == arg2 else 0
+        #
+        # else:
+        #     raise "Not supported"
+
     def __repr__(self):
         if self.op == 'inp':
             return f'IN {self.arg1}'
